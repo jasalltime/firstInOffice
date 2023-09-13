@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:gmail="http://www.mulesoft.org/schema/mule/gmail" xmlns:smtps="http://www.mulesoft.org/schema/mule/smtps"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd 
+http://www.mulesoft.org/schema/mule/smtps http://www.mulesoft.org/schema/mule/smtps/current/mule-smtps.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/gmail http://www.mulesoft.org/schema/mule/gmail/current/mule-gmail.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="5b0ef08d-e276-449f-9e6c-0adb051c834d" basePath="/shards/steam">
+		<http:request-connection host="api.pubg.com" protocol="HTTPS"/>
+	</http:request-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="953f52ce-fb6c-4ceb-b468-7dd88a4b6513" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="20f02bcb-570f-4aca-b2dd-f77c6cba6507" >
+		<file:connection workingDir="C:\Users\acer\AnypointStudio\studio-workspace\poc-1\src\main\resources\input" />
+	</file:config>
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="bde71ce7-af78-4fe4-bf36-93667a715313" >
+		<email:smtp-connection host="smtp.gmail.com" user="jasneetsingh0116@gmail.com" password="dolborozadiezplj">
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
+	<flow name="poc-1Flow" doc:id="10221440-9b2f-41dd-8750-dc1db47b5fe5" >
+		<http:listener doc:name="Listener" doc:id="5d6e9120-9437-44a3-aff0-6d72471eab56" config-ref="HTTP_Listener_config" path="/players"/>
+		<http:request method="GET" doc:name="Request" doc:id="e803b630-51db-48de-97c9-0cac0440cc6e" config-ref="HTTP_Request_configuration" path="/players">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJmYjA0YTliMC0zMjlhLTAxM2MtMDhlOS0xNjJhMTUxOTZjMzIiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjk0NDEzOTgyLCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6InBvYy0xIn0.1k6lP-z-7Fm94UgWj_tfraiVLldilp6Ggq_XOIJBx70",
+	"Accept" : "application/vnd.api+json"
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"filter[playerNames]" : attributes.queryParams.player
+}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="ae88a50b-750c-48db-a41b-d38acd5cf477" message='#[payload]'/>
+		<ee:transform doc:name="Transform Message" doc:id="2929540c-8efc-4f25-971b-464aea481025" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+   payload.data map {
+	"type": $."type",
+	"id": $.id,
+	"titleId": $.attributes.titleId,
+	"shardId": $.attributes.shardId,
+	"patchVersion": $.attributes.patchVersion,
+	"last_match_id": $.relationships.matches.data[1].id
+}
+
+//payload.data.relationships.matches.data[0]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<email:send doc:name="Send" doc:id="f7e52d2f-690d-434e-99e6-b8211fa6ad6a" fromAddress="jasneetsingh0116@gmail.com" config-ref="Email_SMTP" subject="POC-1">
+			<email:to-addresses>
+				<email:to-address value="jasneetsingh0116@gmail.com" />
+				<email:to-address value="chhavi.jain@cyntralabs.com" />
+			</email:to-addresses>
+			<email:body>
+				<email:content><![CDATA[HEY!]]></email:content>
+			</email:body>
+			<email:attachments><![CDATA[#[%dw 2.0
+output application/csv
+---
+{
+	"PlayerInfo": payload
+}]]]></email:attachments>
+		</email:send>
+		<file:write doc:name="Write" doc:id="30af2362-3ad3-4f4d-ab93-2c56bf45ca23" config-ref="File_Config" path="/poc-1/src/main/resources/input/PlayerData.CSV" />
+		<logger level="INFO" doc:name="Logger" doc:id="81657845-91d6-489c-9c0d-d3dcdfd1c40d" message='#["\nFile Writing Successful"]'/>
+	</flow>
+</mule>
