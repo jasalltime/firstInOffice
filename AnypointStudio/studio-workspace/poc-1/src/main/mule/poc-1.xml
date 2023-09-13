@@ -45,7 +45,7 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 	"filter[playerNames]" : attributes.queryParams.player
 }]]]></http:query-params>
 		</http:request>
-		<logger level="INFO" doc:name="Logger" doc:id="ae88a50b-750c-48db-a41b-d38acd5cf477" message='#[payload]'/>
+		<logger level="INFO" doc:name="Logger" doc:id="ae88a50b-750c-48db-a41b-d38acd5cf477" message='#["Output from the API" : payload]'/>
 		<ee:transform doc:name="Transform Message" doc:id="2929540c-8efc-4f25-971b-464aea481025" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -54,9 +54,12 @@ output application/csv
    payload.data map {
 	"type": $."type",
 	"id": $.id,
+	"NAME":$.attributes.name,
 	"titleId": $.attributes.titleId,
 	"shardId": $.attributes.shardId,
 	"patchVersion": $.attributes.patchVersion,
+	"clanId": $.attributes.clanId,
+	"stats_null": $.attributes.stats,
 	"last_match_id": $.relationships.matches.data[1].id
 }
 
